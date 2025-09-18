@@ -96,7 +96,7 @@ type
     procedure EcranDebloque;
     procedure InitialiseEcran;
     procedure ProblemeDeBaseDeDonnees;
-    procedure ChargeArborescence(CategorieMere: TTreeViewitem1 = nil;
+    procedure ChargeArborescence(CategorieMere: TTreeViewItem = nil;
       AvecDescendants: boolean = true);
     procedure DesactiveZoneDeSaisie;
   public
@@ -115,46 +115,46 @@ uses
 
 procedure TfrmMain.btnAjouteDescendantClick(Sender: TObject);
 var
-  item1: TTreeViewitem1;
+  item: TTreeViewItem;
 begin
   DesactiveZoneDeSaisie;
-  item1 := TTreeViewitem1.create(self);
-  item1.text := 'n/a';
+  item := TTreeViewItem.create(self);
+  item.text := 'n/a';
   if assigned(tvArborescence.Selected) then
   begin
-    item1.tag := dmDBCategories.ajoutecategorie(tvArborescence.Selected.tag,
-      item1.text);
-    tvArborescence.Selected.AddObject(item1);
+    item.tag := dmDBCategories.ajoutecategorie(tvArborescence.Selected.tag,
+      item.text);
+    tvArborescence.Selected.AddObject(item);
     if (not tvArborescence.Selected.IsExpanded) then
       tvArborescence.Selected.Expand;
   end
   else
   begin
-    item1.tag := dmDBCategories.ajoutecategorie(0, item1.text);
-    tvArborescence.AddObject(item1);
+    item.tag := dmDBCategories.ajoutecategorie(0, item.text);
+    tvArborescence.AddObject(item);
   end;
 end;
 
 procedure TfrmMain.btnAjouteFrereClick(Sender: TObject);
 var
-  item1: TTreeViewitem1;
+  item: TTreeViewItem;
 begin
   DesactiveZoneDeSaisie;
-  item1 := TTreeViewitem1.create(self);
-  item1.text := 'n/a';
+  item := TTreeViewItem.create(self);
+  item.text := 'n/a';
   if assigned(tvArborescence.Selected) and
-    (nil <> tvArborescence.Selected.Parentitem1) then
+    (nil <> tvArborescence.Selected.ParentItem) then
   begin
-    item1.tag := dmDBCategories.ajoutecategorie
-      (tvArborescence.Selected.Parentitem1.tag, item1.text);
-    tvArborescence.Selected.Parentitem1.AddObject(item1);
-    if (not tvArborescence.Selected.Parentitem1.IsExpanded) then
-      tvArborescence.Selected.Parentitem1.Expand;
+    item.tag := dmDBCategories.ajoutecategorie
+      (tvArborescence.Selected.ParentItem.tag, item.text);
+    tvArborescence.Selected.ParentItem.AddObject(item);
+    if (not tvArborescence.Selected.ParentItem.IsExpanded) then
+      tvArborescence.Selected.ParentItem.Expand;
   end
   else
   begin
-    item1.tag := dmDBCategories.ajoutecategorie(0, item1.text);
-    tvArborescence.AddObject(item1);
+    item.tag := dmDBCategories.ajoutecategorie(0, item.text);
+    tvArborescence.AddObject(item);
   end;
 end;
 
@@ -178,10 +178,10 @@ begin
   // TODO : supprimer le niveau et ses descendants
 end;
 
-procedure TfrmMain.ChargeArborescence(CategorieMere: TTreeViewitem1;
+procedure TfrmMain.ChargeArborescence(CategorieMere: TTreeViewItem;
   AvecDescendants: boolean);
 var
-  item1: TTreeViewitem1;
+  item: TTreeViewItem;
   code: integer;
   qry: TFDQuery;
 begin
@@ -196,15 +196,15 @@ begin
       [code]);
     while not qry.eof do
     begin
-      item1 := TTreeViewitem1.create(self);
-      item1.text := qry.FieldByName('libelle').asstring;
-      item1.tag := qry.FieldByName('code').asinteger;
+      item := TTreeViewItem.create(self);
+      item.text := qry.FieldByName('libelle').asstring;
+      item.tag := qry.FieldByName('code').asinteger;
       if assigned(CategorieMere) then
-        CategorieMere.AddObject(item1)
+        CategorieMere.AddObject(item)
       else
-        tvArborescence.AddObject(item1);
+        tvArborescence.AddObject(item);
       if AvecDescendants then
-        ChargeArborescence(item1, true);
+        ChargeArborescence(item, true);
       qry.next;
     end;
   finally
@@ -296,7 +296,7 @@ begin
     dmDBCategories.tabCategories.FindKey([tvArborescence.Selected.tag]);
   if zoneDeSaisie.Visible then
   begin
-    lblNomFichier.Visible := (nil = tvArborescence.Selected.Parentitem1);
+    lblNomFichier.Visible := (nil = tvArborescence.Selected.ParentItem);
     lblPrix.Visible := (not lblNomFichier.Visible) and
       (tvArborescence.Selected.Count = 0);
   end;
