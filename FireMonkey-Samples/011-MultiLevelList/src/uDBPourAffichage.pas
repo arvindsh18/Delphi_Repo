@@ -36,33 +36,27 @@
   https://github.com/DeveloppeurPascal/Delphi-samples
 
   ***************************************************************************
-  File last update : 2025-02-09T11:12:20.922+01:00
-  Signature : 4b33c507277cd57750aa887c86885a9c3382ce69
+  File last update : 2025-02-09T11:12:20.905+01:00
+  Signature : 55f6f3e9c25268d5ef06c4e57affb9bcecaca0da
   ***************************************************************************
 *)
 
-unit Unit1;
+unit uDBPourAffichage;
 
 interface
 
 uses
-  System.SysUtils, System.Types, System.UITypes, System.Classes,
-  System.Variants,
-  FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.StdCtrls,
-  FMX.Edit, FMX.Controls.Presentation;
+  System.SysUtils, System.Classes, FireDAC.Stan.Intf, FireDAC.Stan.Option,
+  FireDAC.Stan.Error, FireDAC.UI.Intf, FireDAC.Phys.Intf, FireDAC.Stan.Def,
+  FireDAC.Stan.Pool, FireDAC.Stan.Async, FireDAC.Phys, FireDAC.Phys.SQLite,
+  FireDAC.Phys.SQLiteDef, FireDAC.Stan.ExprFuncs,
+  FireDAC.Phys.SQLiteWrapper.Stat, FireDAC.FMXUI.Wait, Data.DB,
+  FireDAC.Comp.Client;
 
 type
-  TForm1 = class(TForm)
-    Label1: TLabel;
-    Edit1: TEdit;
-    Label2: TLabel;
-    Edit2: TEdit;
-    Label3: TLabel;
-    Edit3: TEdit;
-    Label4: TLabel;
-    CheckBox1: TCheckBox;
-    Button1: TButton;
-    procedure Button1Click(Sender: TObject);
+  TdmDBPourAffichage = class(TDataModule)
+    dbCategories: TFDConnection;
+    procedure DataModuleCreate(Sender: TObject);
   private
     { Déclarations privées }
   public
@@ -70,15 +64,19 @@ type
   end;
 
 var
-  Form1: TForm1;
+  dmDBPourAffichage: TdmDBPourAffichage;
 
 implementation
 
-{$R *.fmx}
+{%CLASSGROUP 'FMX.Controls.TControl'}
 
-procedure TForm1.Button1Click(Sender: TObject);
+uses uConst, uDownloadAndGetFiles;
+
+{$R *.dfm}
+
+procedure TdmDBPourAffichage.DataModuleCreate(Sender: TObject);
 begin
-  close;
+  OuvreBaseDeDonneesEnCache(dbCategories, TFichiersExternes.dbCategories);
 end;
 
 end.
