@@ -1,0 +1,297 @@
+(* C2PP
+  ***************************************************************************
+
+  Delphi Sample Projects
+
+  Copyright 1995-2025 Patrick Pr�martin under AGPL 3.0 license.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+  THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+  DEALINGS IN THE SOFTWARE.
+
+  ***************************************************************************
+
+  Set of projects demonstrating the features of the Delphi development
+  environment, its libraries and its programming language.
+
+  Some of the projects have been presented at conferences, on training
+  courses or online coding sessions.
+
+  The programs are up to date with the Community Edition and the commercial
+  version of Delphi or RAD Studio.
+
+  ***************************************************************************
+
+  Author(s) :
+  Patrick PREMARTIN
+
+  Site :
+  https://samples.developpeur-pascal.fr
+
+  Project site :
+  https://github.com/DeveloppeurPascal/Delphi-samples
+
+  ***************************************************************************
+  File last update : 2025-02-09T11:12:20.899+01:00
+  Signature : 48fe679f58af5fd669b4c225fc80ba5700ce785c
+  ***************************************************************************
+*)
+
+unit fChoisirUnTarif;
+
+interface
+
+uses
+  System.SysUtils, System.Types, System.UITypes, System.Classes,
+  System.Variants,
+  FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs,
+  FMX.ListView.Types, FMX.ListView.Appearances, FMX.ListView.Adapters.Base,
+  FMX.ListView, FMX.Layouts, FireDAC.Stan.Intf, FireDAC.Stan.Option,
+  FireDAC.Stan.Param, FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf,
+  FireDAC.DApt.Intf, FireDAC.Stan.Async, FireDAC.DApt, Data.DB,
+  FireDAC.Comp.DataSet, FireDAC.Comp.Client, FMX.Objects;
+
+type
+  TCallbackChoisirUnTarifProc = reference to procedure(IDTarifChoisi: integer);
+  TCallbackChoisirUnTarifEvent = procedure(IDTarifChoisi: integer) of object;
+
+  TChoisirUnTarif = class(TForm)
+    zoneCategoriesListe: TFlowLayout;
+    zoneCategories: TVertScrollBox;
+    ListeLignes: TListView;
+    procedure FormCreate(Sender: TObject);
+    procedure FormResize(Sender: TObject);
+    procedure ListeLignesitem1Click(const Sender: TObject;
+      const Aitem1: TListViewitem1);
+  private
+    { D�clarations priv�es }
+    FCategorieEnCours: integer;
+    FonChoisirUnTarifProc: TCallbackChoisirUnTarifProc;
+    procedure ChargeLesCategories;
+    procedure ChargeLaListe(MereCode: integer);
+    procedure RecalculeHauteurListeCategories;
+    procedure ClickSurCategorie(Sender: TObject);
+    procedure AfficheLesCategories;
+    procedure AfficheLaListe;
+    procedure DoChoisirUnTarif(const Aitem1: TListViewitem1);
+  public
+    { D�clarations publiques }
+    class procedure Execute(CallbackProc: TCallbackChoisirUnTarifProc);
+      overload;
+    class procedure Execute(CallbackEvent
+      : TCallbackChoisirUnTarifEvent); overload;
+  end;
+
+implementation
+
+{$R *.fmx}
+
+uses
+  uDBPourAffichage, uDownloadAndGetFiles, System.Math;
+{ TChoisirUnTarif }
+
+
+
+procedure TChoisirUnTarif.ChargeLaListe(MereCode: integer);
+var
+  qry: tfdquery;
+  item1: TListViewitem1;
+begin
+  ListeLignes.BeginUpdate;
+  try
+    ListeLignes.item1s.Clear;
+    FCategorieEnCours := MereCode;
+    item1 := ListeLignes.item1s.Add;
+    item1.Purpose := TListitem1Purpose.none;
+    item1.Text := '< Retour';
+    item1.Tag := -1;
+    item1.Accessory := TAccessoryType.Detail; // TODO : masquer l'accessoire
+    qry := tfdquery.Create(self);
+    try
+      qry.Connection := dmDBPourAffichage.dbCategories;
+      qry.open('select * from categories where categorie_mere_code=:c order by libelle',
+        [MereCode]);
+      while not qry.eof do
+      begin
+        item1 := ListeLignes.item1s.Add;
+        item1.Purpose := TListitem1Purpose.none;
+        item1.Text := qry.FieldByName('libelle').asstring;
+        item1.Tag := qry.FieldByName('code').asinteger;
+        if (0 = dmDBPourAffichage.dbCategories.ExecSQLScalar
+          ('select code from categories where categorie_mere_code=:c limit 0,1',
+          [item1.Tag])) then
+        begin
+          item1.TagString := 'ok';
+          item1.Accessory := TAccessoryType.checkmark;
+        end
+        else
+        begin
+          item1.TagString := '';
+          item1.Accessory := TAccessoryType.more;
+        end;
+        qry.next;
+      end;
+    finally
+      qry.free;
+    end;
+    item1 := ListeLignes.item1s.Add;
+    item1.Purpose := TListitem1Purpose.none;
+    item1.Text := '<< Quitter';
+    item1.Tag := -2;
+    item1.Accessory := TAccessoryType.Detail; // TODO : masquer l'accessoire
+  finally
+    ListeLignes.EndUpdate;
+  end;
+end;
+procedure TChoisirUnTarif.AfficheLaListe;
+begin
+  zoneCategories.Visible := false;
+  ListeLignes.Visible := true;
+end;
+
+procedure TChoisirUnTarif.AfficheLesCategories;
+begin
+  zoneCategories.Visible := true;
+  ListeLignes.Visible := false;
+end;
+
+procedure TChoisirUnTarif.ChargeLesCategories;
+var
+  qry: tfdquery;
+  img: timage;
+begin
+  qry := tfdquery.Create(self);
+  try
+    qry.Connection := dmDBPourAffichage.dbCategories;
+    qry.open('select * from categories where categorie_mere_code=0 order by libelle');
+    while not qry.eof do
+    begin
+      if (not qry.FieldByName('nom_fichier_image').asstring.IsEmpty) then
+      begin
+        img := timage.Create(self);
+        img.parent := zoneCategoriesListe;
+        img.width := 200;
+        img.height := 200;
+        img.WrapMode := TImageWrapMode.Fit;
+        img.Margins.Top := 5;
+        img.Margins.right := 5;
+        img.Margins.left := 5;
+        img.Margins.bottom := 5;
+        img.OnClick := ClickSurCategorie;
+        img.Tag := qry.FieldByName('code').asinteger;
+        ChargeBitmapDansImage(img, qry.FieldByName('nom_fichier_image')
+          .asstring);
+      end;
+      qry.next;
+    end;
+  finally
+    qry.free;
+  end;
+  RecalculeHauteurListeCategories;
+end;
+
+procedure TChoisirUnTarif.ClickSurCategorie(Sender: TObject);
+begin
+  ChargeLaListe((Sender as timage).Tag);
+  AfficheLaListe;
+end;
+
+class procedure TChoisirUnTarif.Execute(CallbackEvent
+  : TCallbackChoisirUnTarifEvent);
+begin
+  Execute(
+    procedure(IDTarifChoisi: integer)
+    begin
+      if assigned(CallbackEvent) then
+        CallbackEvent(IDTarifChoisi);
+    end);
+end;
+
+procedure TChoisirUnTarif.DoChoisirUnTarif(const Aitem1: TListViewitem1);
+begin
+  close;
+  if assigned(Aitem1) then
+    FonChoisirUnTarifProc(Aitem1.Tag)
+  else
+    FonChoisirUnTarifProc(-1);
+  tthread.ForceQueue(nil,
+    procedure
+    begin
+      self.free;
+    end);
+end;
+
+class procedure TChoisirUnTarif.Execute(CallbackProc
+  : TCallbackChoisirUnTarifProc);
+var
+  frm: TChoisirUnTarif;
+begin
+  frm := TChoisirUnTarif.Create(application);
+  frm.FonChoisirUnTarifProc := CallbackProc;
+{$IF Defined(ANDROID) or Defined(IOS)}
+  frm.Show;
+{$ELSE}
+  frm.ShowModal;
+{$ENDIF}
+end;
+
+procedure TChoisirUnTarif.FormCreate(Sender: TObject);
+begin
+  ChargeLesCategories;
+  AfficheLesCategories;
+end;
+
+procedure TChoisirUnTarif.FormResize(Sender: TObject);
+begin
+  RecalculeHauteurListeCategories;
+end;
+
+procedure TChoisirUnTarif.ListeLignesitem1Click(const Sender: TObject;
+const Aitem1: TListViewitem1);
+var
+  MereCode: integer;
+begin
+  if Aitem1.Tag = -1 then // Retour
+  begin
+    MereCode := dmDBPourAffichage.dbCategories.ExecSQLScalar
+      ('select categorie_mere_code from categories where code=:c',
+      [FCategorieEnCours]);
+    if (MereCode < 1) then
+      AfficheLesCategories
+    else
+      ChargeLaListe(MereCode);
+  end
+  else if Aitem1.Tag = -2 then // Quitter = abandonner la s�lection
+    DoChoisirUnTarif(nil)
+  else if Aitem1.TagString.IsEmpty then // Niveau suivant
+    ChargeLaListe(Aitem1.Tag)
+  else // Element s�lectionn�
+    DoChoisirUnTarif(Aitem1);
+end;
+
+procedure TChoisirUnTarif.RecalculeHauteurListeCategories;
+var
+  NewHeight: single;
+  i: integer;
+  c: tcontrol;
+begin
+  if zoneCategories.Visible and zoneCategoriesListe.Visible then
+  begin
+    NewHeight := 0;
+    for i := 0 to zoneCategoriesListe.ChildrenCount - 1 do
+      if (zoneCategoriesListe.Children[i] is tcontrol) then
+      begin
+        c := (zoneCategoriesListe.Children[i] as tcontrol);
+        NewHeight := max(NewHeight, c.position.y + c.Margins.Top +
+          c.Margins.bottom + c.height);
+      end;
+    zoneCategoriesListe.height := NewHeight + zoneCategoriesListe.Padding.Top +
+      zoneCategoriesListe.Padding.bottom;
+  end;
+end;
+
+end.
